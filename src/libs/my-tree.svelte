@@ -785,7 +785,7 @@
 
 <div class="fn__flex-1 fn__flex-column testDocks">
     <div class="block__icons">
-        <div class="block__logo" title="BoardMix目录树">
+        <div class="block__logo" title="博思白板（维护版）· BoardMix 目录树">
             <svg class="block__logoicon">
                 <use xlink:href="#boardmix_whiteboard"></use>
             </svg>

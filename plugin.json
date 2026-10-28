@@ -1,7 +1,7 @@
 {
-  "name": "plugin-boardmix",
+  "name": "plugin-boardmix-maintained",
   "author": "winter60, Gt841",
-  "url": "https://github.com/Gt841/plugin-boardmix",
+  "url": "https://github.com/Gt841/plugin-boardmix-maintained",
   "version": "0.0.6",
   "minAppVersion": "3.0.1",
   "backends": [
@@ -14,12 +14,12 @@
     "desktop-window"
   ],
   "displayName": {
-    "en_US": "Plugin boardmix",
-    "zh_CN": "博思白板"
+    "en_US": "BoardMix (Maintained)",
+    "zh_CN": "博思白板（维护版）"
   },
   "description": {
-    "en_US": "Plugin boardmix",
-    "zh_CN": "博思白板"
+    "en_US": "Open BoardMix whiteboards in SiYuan tabs, with a whiteboard directory tree. Community-maintained fork.",
+    "zh_CN": "在思源页签中打开博思白板，并提供白板目录树。社区维护版：修复登录态读取，优化目录树交互。"
   },
   "readme": {
     "en_US": "README.md",
@@ -34,6 +34,7 @@
     "boardmix",
     "博思",
     "白板",
-    "whiteboard"
+    "whiteboard",
+    "maintained"
   ]
 }
