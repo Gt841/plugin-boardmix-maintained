@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Tree, Dock } from "siyuan-kit-svelte";
+    import { Tree } from "siyuan-kit-svelte";
     import { onDestroy, onMount } from "svelte";
     import { Menu, Dialog, confirm } from "siyuan";
     import ConfirmInput from "@/libs/confirm-input.svelte";
@@ -783,38 +783,49 @@
     };
 </script>
 
-<Dock title="BoardMix目录树" icon="boardmix_whiteboard" name="testDocks">
-    <div slot="actions" class="boardmix-dock-actions">
-        <span
-            class="block__icon b3-tooltips b3-tooltips__sw"
-            role="button"
-            tabindex="0"
-            aria-label="刷新目录树"
-            on:click={refreshTree}
-            on:keydown={(e) => e.key === "Enter" && refreshTree()}
-        >
-            <svg><use xlink:href="#boardmix_refresh"></use></svg>
-        </span>
-        <span
-            class="block__icon b3-tooltips b3-tooltips__sw"
-            role="button"
-            tabindex="0"
-            aria-label={loggedIn ? "退出 BoardMix 登录" : "登录 BoardMix"}
-            on:click={onLoginClick}
-            on:keydown={(e) => e.key === "Enter" && onLoginClick()}
-        >
-            <svg>
-                <use
-                    xlink:href={loggedIn
-                        ? "#boardmix_logout"
-                        : "#boardmix_login"}
-                ></use>
+<div class="fn__flex-1 fn__flex-column testDocks">
+    <div class="block__icons">
+        <div class="block__logo" title="BoardMix目录树">
+            <svg class="block__logoicon">
+                <use xlink:href="#boardmix_whiteboard"></use>
             </svg>
-        </span>
+            <span class="boardmix-dock-title">博思白板</span>
+        </div>
+        <span class="fn__flex-1 fn__space" />
+        <div class="boardmix-dock-actions">
+            <span
+                class="block__icon b3-tooltips b3-tooltips__sw"
+                role="button"
+                tabindex="0"
+                aria-label="刷新目录树"
+                on:click={refreshTree}
+                on:keydown={(e) => e.key === "Enter" && refreshTree()}
+            >
+                <svg><use xlink:href="#boardmix_refresh"></use></svg>
+            </span>
+            <span
+                class="block__icon b3-tooltips b3-tooltips__sw"
+                role="button"
+                tabindex="0"
+                aria-label={loggedIn
+                    ? "退出 BoardMix 登录"
+                    : "登录 BoardMix"}
+                on:click={onLoginClick}
+                on:keydown={(e) => e.key === "Enter" && onLoginClick()}
+            >
+                <svg>
+                    <use
+                        xlink:href={loggedIn
+                            ? "#boardmix_logout"
+                            : "#boardmix_login"}
+                    ></use>
+                </svg>
+            </span>
+        </div>
     </div>
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
-    <div slot="content" class="boardmix-tree" on:click={onTreeClick}>
+    <div class="fn__flex-1 boardmix-tree" on:click={onTreeClick}>
         <Tree
             {treeNodes}
             {actions}
@@ -822,29 +833,32 @@
             on:expandedChange={expandedChange}
         />
     </div>
-</Dock>
-
+</div>
 <style>
-    /* 让标题和两个操作按钮在同一行，并且始终可见 */
-    :global(.testDocks .block__icons) {
+    /* 标题和两个操作按钮保持同一行，按钮始终可见 */
+    .block__icons {
         display: flex;
         flex-wrap: nowrap;
         align-items: center;
     }
 
-    :global(.testDocks .block__icons .block__logo) {
+    .block__logo {
         display: flex;
         align-items: center;
         min-width: 0;
-        width: auto;
-        flex: 0 1 auto;
         margin-right: 0;
+        flex: 0 1 auto;
         overflow: hidden;
-        white-space: nowrap;
     }
 
-    :global(.testDocks .block__icons .block__logoicon) {
+    .block__logoicon {
         flex: 0 0 auto;
+    }
+
+    .boardmix-dock-title {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
     }
 
     .boardmix-dock-actions {
@@ -881,7 +895,8 @@
     }
 
     .boardmix-tree {
-        height: 100%;
+        flex: 1 1 auto;
+        min-height: 0;
         overflow: auto;
     }
 </style>
