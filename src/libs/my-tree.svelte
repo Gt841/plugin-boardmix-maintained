@@ -82,6 +82,20 @@
         }
     };
 
+    // Tree 组件内部的递归子节点不会把 nodeClick 事件透传出来，
+    // 所以这里在容器上做事件委托，统一处理所有层级节点名称的单击。
+    const onTreeClick = (e: MouseEvent) => {
+        const target = e.target as HTMLElement | null;
+        if (!target || !target.closest) return;
+        // 只处理名称区域的单击，箭头和更多按钮保持原有行为
+        if (!target.closest(".b3-list-item__text")) return;
+        const li = target.closest("li[data-node-id]") as HTMLElement | null;
+        if (!li || !li.dataset.nodeId) return;
+        const node = treeNodeMap[li.dataset.nodeId];
+        if (!node) return;
+        nodeClick(node);
+    };
+
     // 更多菜单
     let moreClick = (targetNode, e) => {
         console.log(targetNode, e);
@@ -770,18 +784,24 @@
 </script>
 
 <Dock title="BoardMix目录树" icon="boardmix_whiteboard" name="testDocks">
-    <div slot="actions">
+    <div slot="actions" class="boardmix-dock-actions">
         <span
             class="block__icon b3-tooltips b3-tooltips__sw"
+            role="button"
+            tabindex="0"
             aria-label="刷新目录树"
             on:click={refreshTree}
+            on:keydown={(e) => e.key === "Enter" && refreshTree()}
         >
             <svg><use xlink:href="#boardmix_refresh"></use></svg>
         </span>
         <span
             class="block__icon b3-tooltips b3-tooltips__sw"
+            role="button"
+            tabindex="0"
             aria-label={loggedIn ? "退出 BoardMix 登录" : "登录 BoardMix"}
             on:click={onLoginClick}
+            on:keydown={(e) => e.key === "Enter" && onLoginClick()}
         >
             <svg>
                 <use
@@ -792,19 +812,74 @@
             </svg>
         </span>
     </div>
-    <div slot="content">
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <div slot="content" class="boardmix-tree" on:click={onTreeClick}>
         <Tree
             {treeNodes}
             {actions}
             {expandedIds}
-            on:nodeClick={nodeClick}
             on:expandedChange={expandedChange}
         />
     </div>
 </Dock>
 
 <style>
-    .block__icon {
+    /* 让标题和两个操作按钮在同一行，并且始终可见 */
+    :global(.testDocks .block__icons) {
+        display: flex;
+        flex-wrap: nowrap;
+        align-items: center;
+    }
+
+    :global(.testDocks .block__icons .block__logo) {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        flex: 0 1 auto;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+
+    :global(.testDocks .block__icons .block__logoicon) {
+        flex: 0 0 auto;
+    }
+
+    .boardmix-dock-actions {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 2px;
+        flex: 0 0 auto;
+        margin-left: 4px;
+    }
+
+    .boardmix-dock-actions .block__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        padding: 0;
         cursor: pointer;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    .boardmix-dock-actions .block__icon:hover {
+        background-color: var(--b3-list-hover, rgba(0, 0, 0, 0.06));
+        border-radius: var(--b3-border-radius, 4px);
+    }
+
+    .boardmix-dock-actions .block__icon svg {
+        width: 14px;
+        height: 14px;
+    }
+
+    .boardmix-tree {
+        height: 100%;
+        overflow: auto;
     }
 </style>
