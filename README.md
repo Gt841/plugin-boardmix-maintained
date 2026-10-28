@@ -5,7 +5,8 @@
 
 ## 维护说明
 
-本仓库是 [winter60/plugin-boardmix](https://github.com/winter60/plugin-boardmix) 的维护分支。
+本仓库是 [winter60/plugin-boardmix](https://github.com/winter60/plugin-boardmix) 的维护分支
+（[Gt841/plugin-boardmix](https://github.com/Gt841/plugin-boardmix)）。
 原仓库自 2024 年后未再更新，而 BoardMix 已将登录态从 cookie 迁移到 localStorage
 （`BOSYUNCurrent`），导致原插件点击“我确认我已经登录了”时提示“未获取到 access_token”。
 本分支已修复该问题，并保留对旧版 cookie 的兼容读取。

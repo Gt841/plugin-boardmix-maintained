@@ -1,7 +1,7 @@
 {
   "name": "plugin-boardmix",
-  "author": "winter60",
-  "url": "https://github.com/winter60/plugin-boardmix",
+  "author": "winter60, Gt841",
+  "url": "https://github.com/Gt841/plugin-boardmix",
   "version": "0.0.4",
   "minAppVersion": "3.0.1",
   "backends": [
