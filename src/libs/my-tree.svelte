@@ -836,10 +836,11 @@
         display: flex;
         align-items: center;
         min-width: 0;
+        width: auto;
         flex: 0 1 auto;
+        margin-right: 0;
         overflow: hidden;
         white-space: nowrap;
-        text-overflow: ellipsis;
     }
 
     :global(.testDocks .block__icons .block__logoicon) {
@@ -862,6 +863,7 @@
         justify-content: center;
         width: 24px;
         height: 24px;
+        margin-left: 0;
         padding: 0;
         cursor: pointer;
         opacity: 1 !important;
