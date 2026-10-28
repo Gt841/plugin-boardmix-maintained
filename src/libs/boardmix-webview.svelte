@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onDestroy, onMount } from "svelte";
     import { pushErrMsg } from "@/libs/api";
+    import { store_logged_in } from "@/libs/store";
 
     export let plugin;
     export let src;
@@ -98,6 +99,7 @@
         await plugin.saveData("BOARDMIX_CONFIG", {
             access_token: access_token,
         });
+        store_logged_in.set(true);
         let refreshTree =
             plugin.myTree.$$.ctx[plugin.myTree.$$.props["refreshTree"]];
         await refreshTree();

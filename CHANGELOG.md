@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.5
+1. 目录树交互：点击文件夹名称展开/收起，点击文件名直接在页签中打开。
+2. 同一文件只保留一个页签，重复点击时切换到已存在的页签。
+3. dock 顶部操作改为刷新、登录/登出图标。
+4. 页签使用博思图标，便于和思源文档页签区分。
+
 ## 0.0.4
 1. 修复 BoardMix 登录态改为存储在 localStorage（BOSYUNCurrent）后，插件读取 cookie 失败并提示“未获取到 access_token”的问题。
 2. 取 token 时优先读取 localStorage，其次回退旧版 cookie。

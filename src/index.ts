@@ -3,6 +3,7 @@ import {
     openTab,
     // getFrontend,
     fetchSyncPost,
+    type ITab,
     // IOperation,
 
 } from "siyuan";
@@ -29,6 +30,10 @@ export default class BoardmixPlugin extends Plugin {
     public myTree: any;
     public loginTab: any;
     public allTab = new Set();
+    // tabType -> 已打开的页签，用于去重
+    public tabMap = new Map<string, Promise<ITab>>();
+    // 已注册过的页签类型，避免重复 addTab
+    private registeredTabs = new Set<string>();
 
     async onload() {
         // this.data[STORAGE_NAME] = { readonlyText: "Readonly" };
@@ -45,6 +50,15 @@ export default class BoardmixPlugin extends Plugin {
 </symbol>
 <symbol id="boardmix_whiteboard" viewBox="0 0 1024 1024" >
 <path d="M828.6875 909.59375H195.3125c-55.78125 0-101.0625-45.375-101.0625-101.0625V215.46875c0-55.78125 45.375-101.0625 101.0625-101.0625h107.8125c18.65625 0 33.65625 15.09375 33.65625 33.65625s-15.09375 33.65625-33.65625 33.65625h-107.8125c-18.5625 0-33.65625 15.09375-33.65625 33.65625v592.96875c0 18.5625 15.09375 33.65625 33.65625 33.65625h633.375c18.5625 0 33.65625-15.09375 33.65625-33.65625v-87.5625c0-18.65625 15.09375-33.65625 33.65625-33.65625s33.65625 15.09375 33.65625 33.65625v87.5625c0.09375 55.875-45.1875 101.25-100.96875 101.25z" fill="#727678" p-id="8772"></path><path d="M445.03625 462.2346875L788.0909375 119.18 940.559375 271.6484375 597.5046875 614.703125zM410.9375 635.5625c0.1875 7.125 6.09375 13.03125 13.21875 13.21875l159-19.78125-152.4375-152.4375-19.78125 159z" fill="#727678" p-id="8773"></path>
+</symbol>
+<symbol id="boardmix_refresh" viewBox="0 0 24 24">
+<path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"></path>
+</symbol>
+<symbol id="boardmix_login" viewBox="0 0 24 24">
+<path d="M11 7L9.6 8.4l2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5-5-5zm9 12h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-8v2h8v14z"></path>
+</symbol>
+<symbol id="boardmix_logout" viewBox="0 0 24 24">
+<path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5-5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"></path>
 </symbol>
 `);
 
@@ -154,27 +168,62 @@ export default class BoardmixPlugin extends Plugin {
         });
     }
 
-    openBoardMixTab(param) {
-        let { tabType, name, url, showCookieButton } = param;
-        let tabDiv = document.createElement("div");
-        tabDiv.id = "login-tab";
-        tabDiv.setAttribute("style", "width:100%;height:100%;position:relative;");
+    openBoardMixTab(param: {
+        tabType: string;
+        name: string;
+        url: string;
+        showCookieButton?: boolean;
+    }): Promise<ITab> {
+        const { tabType } = param;
 
-        new BoardmixWebview({
-            target: tabDiv,
-            props: {
-                plugin: this,
-                app: this.app,
-                this: this,
-                src: url,
-                showCookieButton: showCookieButton,
-            }
-        });
+        // 同一个文件只保留一个页签，重复点击时切换到已有页签
+        const existing = this.tabMap.get(tabType);
+        if (existing) {
+            return existing.then((tab) => {
+                if (tab?.headElement?.isConnected) {
+                    tab.headElement.click();
+                    return tab;
+                }
+                this.tabMap.delete(tabType);
+                return this.createBoardMixTab(param);
+            });
+        }
 
-        if (!(tabType in this.allTab)) {
+        const promise = this.createBoardMixTab(param);
+        this.tabMap.set(tabType, promise);
+        promise.catch(() => this.tabMap.delete(tabType));
+        return promise;
+    }
+
+    private createBoardMixTab(param: {
+        tabType: string;
+        name: string;
+        url: string;
+        showCookieButton?: boolean;
+    }): Promise<ITab> {
+        const { tabType, name, url, showCookieButton = false } = param;
+
+        if (!this.registeredTabs.has(tabType)) {
+            this.registeredTabs.add(tabType);
+            const plugin = this;
             this.addTab({
                 type: tabType,
                 init() {
+                    const tabDiv = document.createElement("div");
+                    tabDiv.setAttribute(
+                        "style",
+                        "width:100%;height:100%;position:relative;",
+                    );
+                    new BoardmixWebview({
+                        target: tabDiv,
+                        props: {
+                            plugin,
+                            app: plugin.app,
+                            this: plugin,
+                            src: url,
+                            showCookieButton,
+                        },
+                    });
                     this.element.appendChild(tabDiv);
                     console.log(this.element);
                 },
@@ -183,16 +232,16 @@ export default class BoardmixPlugin extends Plugin {
                 },
                 destroy() {
                     console.log("destroy tab:", tabType);
-                }
+                    plugin.tabMap.delete(tabType);
+                },
             });
-            this.allTab.add(tabType);
         }
-
 
         return openTab({
             app: this.app,
             custom: {
-                icon: "",
+                // 页签上显示博思图标，便于和思源文档页签区分
+                icon: "boardmix_whiteboard",
                 title: name,
                 data: {
                     text: name,
@@ -200,7 +249,6 @@ export default class BoardmixPlugin extends Plugin {
                 id: this.name + tabType,
             },
         });
-
     }
 
     private addBoardmixMenus(detail, blockId) {

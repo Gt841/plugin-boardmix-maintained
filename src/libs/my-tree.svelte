@@ -1,10 +1,14 @@
 <script lang="ts">
-    import { Tree, Button, Dock } from "siyuan-kit-svelte";
+    import { Tree, Dock } from "siyuan-kit-svelte";
     import { onDestroy, onMount } from "svelte";
-    import { Menu, Dialog } from "siyuan";
+    import { Menu, Dialog, confirm } from "siyuan";
     import ConfirmInput from "@/libs/confirm-input.svelte";
     import MoveTree from "@/libs/move-tree.svelte";
-    import { store_boardmix_header, openLoginFun } from "@/libs/store";
+    import {
+        store_boardmix_header,
+        store_logged_in,
+        openLoginFun,
+    } from "@/libs/store";
     import {
         createFolder,
         createFile,
@@ -40,8 +44,42 @@
 
     onDestroy(() => {});
 
-    let nodeClick = (e) => {
-        console.log("open:", e);
+    let nodeClick = async (node) => {
+        if (!node) return;
+
+        // 文件：点击直接在页签中打开（openBoardMixTab 内部会去重）
+        if (node.type === "file") {
+            plugin.openBoardMixTab({
+                tabType: node.nodeId,
+                name: node.name,
+                url: "https://boardmix.cn/app/editor/" + node.nodeId,
+                showCookieButton: false,
+            });
+            return;
+        }
+
+        // 文件夹/项目/团队：点击名称展开或收起
+        if (
+            node.type === "folder" ||
+            node.type === "project" ||
+            node.type === "team"
+        ) {
+            const id = node.nodeId;
+            if (expandedIds.includes(id)) {
+                expandedIds = expandedIds.filter((v) => v !== id);
+            } else {
+                expandedIds = [...expandedIds, id];
+                const target = treeNodeMap[id];
+                const hasVirtualNode =
+                    target &&
+                    target.children &&
+                    target.children.some((item) => item.type === "vir_node");
+                if (hasVirtualNode) {
+                    await updateChildren(target);
+                }
+            }
+            oldExpandedIds = expandedIds.slice(0);
+        }
     };
 
     // 更多菜单
@@ -338,7 +376,10 @@
 
     async function genBoardmixHeader() {
         let BOARDMIX_CONFIG = await plugin.loadData("BOARDMIX_CONFIG");
-        let access_token = BOARDMIX_CONFIG["access_token"];
+        let access_token = BOARDMIX_CONFIG
+            ? BOARDMIX_CONFIG["access_token"] || ""
+            : "";
+        store_logged_in.set(!!access_token);
 
         store_boardmix_header.set({
             accept: "application/json, text/plain, */*",
@@ -351,13 +392,19 @@
             "sec-fetch-site": "same-site",
             "x-lang": "zh-CN",
         });
+        return access_token;
     }
 
     refreshTree = async () => {
         //关闭所有展开的节点
         expandedIds = [];
         oldExpandedIds = [];
-        await genBoardmixHeader();
+        let access_token = await genBoardmixHeader();
+        // 未登录时不请求接口，避免一串 401
+        if (!access_token) {
+            treeNodes = [];
+            return;
+        }
         let spaceRes = await getSpaceConfig();
         let { project_id, team_id } = spaceRes;
         console.log(project_id);
@@ -435,6 +482,8 @@
     };
 
     let expandedChange = async (e) => {
+        // 与 Tree 内部展开状态保持同步，供名称点击切换展开/收起
+        expandedIds = e.detail;
         let { toggleNodeId, isExpanded } = getCurrToggle(e.detail);
         // console.log(toggleNodeId, isExpanded ? "展开了" : "关闭了");
         let toggleNode = treeNodeMap[toggleNodeId];
@@ -664,23 +713,86 @@
     });
 
     openLoginFun.subscribe((fun) => (openLogin = fun));
+
+    // 登录状态：用于切换 dock 上的登录/登出图标
+    let loggedIn = false;
+    store_logged_in.subscribe((value) => (loggedIn = value));
+
+    const onLoginClick = () => {
+        if (!loggedIn) {
+            openLogin();
+            return;
+        }
+
+        confirm(
+            "退出登录",
+            "退出后将清除本机保存的 BoardMix 登录信息，需要重新登录才能使用目录树。确定退出吗？",
+            async () => {
+                await plugin.removeData("BOARDMIX_CONFIG");
+                try {
+                    const remote = (window as any).require("@electron/remote");
+                    const list =
+                        remote.webContents?.getAllWebContents?.() ?? [];
+                    for (const wc of list) {
+                        let url = "";
+                        try {
+                            url = wc.getURL() || "";
+                        } catch (err) {
+                            continue;
+                        }
+                        if (!url.startsWith("https://boardmix.cn")) continue;
+                        try {
+                            await wc.executeJavaScript(
+                                "localStorage.removeItem('BOSYUNCurrent')",
+                            );
+                        } catch (err) {
+                            /* ignore */
+                        }
+                    }
+                    await remote.session
+                        .fromPartition("persist:boardmix")
+                        .clearStorageData({
+                            storages: ["cookies", "localstorage"],
+                        });
+                } catch (err) {
+                    console.warn("boardmix: clear login state failed", err);
+                }
+
+                store_boardmix_header.set({});
+                store_logged_in.set(false);
+                treeNodes = [];
+                expandedIds = [];
+                oldExpandedIds = [];
+                pushErrMsg("已退出 BoardMix 登录");
+            },
+        );
+    };
 </script>
 
 <Dock title="BoardMix目录树" icon="boardmix_whiteboard" name="testDocks">
     <div slot="actions">
         <span
-            data-type="min"
             class="block__icon b3-tooltips b3-tooltips__sw"
-            aria-label="最小化"
-            ><svg><use xlink:href="#iconMin"></use></svg></span
+            aria-label="刷新目录树"
+            on:click={refreshTree}
         >
+            <svg><use xlink:href="#boardmix_refresh"></use></svg>
+        </span>
+        <span
+            class="block__icon b3-tooltips b3-tooltips__sw"
+            aria-label={loggedIn ? "退出 BoardMix 登录" : "登录 BoardMix"}
+            on:click={onLoginClick}
+        >
+            <svg>
+                <use
+                    xlink:href={loggedIn
+                        ? "#boardmix_logout"
+                        : "#boardmix_login"}
+                ></use>
+            </svg>
+        </span>
     </div>
     <div slot="content">
-        <div class="button_box">
-            <Button label="刷新树" on:click={refreshTree}></Button>
-            <Button label="查看登录" on:click={openLogin}></Button>
-        </div>
-
         <Tree
             {treeNodes}
             {actions}
@@ -692,10 +804,7 @@
 </Dock>
 
 <style>
-    .button_box {
-        text-align: center;
+    .block__icon {
+        cursor: pointer;
     }
-    /* .button_box button {
-        width: 80px;
-    } */
 </style>
